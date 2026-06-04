@@ -1,271 +1,202 @@
 import React, { useState, useEffect } from 'react';
 import api from './services/api';
-import TreeList from './components/TreeList';
-import TreeViewer from './components/TreeViewer';
-import PersonForm from './components/PersonForm';
-import RelationshipViewer from './components/RelationshipViewer';
-import PersonSearch from './components/PersonSearch';
+import Header from './components/Header';
+import UserInput from './components/UserInput';
+import GraphViewer from './components/GraphViewer';
+import PersonProfiles from './components/PersonProfiles';
+import RelationshipQuery from './components/RelationshipQuery';
+import { ThemeProvider } from './context/ThemeContext';
 
 function App() {
-  const [trees, setTrees] = useState([]);
-  const [selectedTree, setSelectedTree] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [persons, setPersons] = useState([]);
   const [relationships, setRelationships] = useState([]);
-  const [showPersonForm, setShowPersonForm] = useState(false);
   const [activeTab, setActiveTab] = useState('graph');
   const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
 
-  // Load trees on mount
+  // Load all data
   useEffect(() => {
-    loadTrees();
+    loadAllData();
   }, []);
 
-  // Load persons and relationships when tree is selected
-  useEffect(() => {
-    if (selectedTree) {
-      loadTreeData();
-    }
-  }, [selectedTree]);
-
-  const loadTrees = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/api/trees');
-      setTrees(response.data);
-      if (response.data.length > 0) {
-        setSelectedTree(response.data[0]);
-      }
-    } catch (error) {
-      console.error('Error loading trees:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadTreeData = async () => {
+  const loadAllData = async () => {
     try {
       setLoading(true);
       const [personsRes, relationshipsRes] = await Promise.all([
-        api.get(`/api/trees/${selectedTree.id}/persons`),
-        api.get('/api/relationships', { params: { tree_id: selectedTree.id } })
+        api.get('/api/persons'),
+        api.get('/api/relationships'),
       ]);
       setPersons(personsRes.data);
       setRelationships(relationshipsRes.data);
     } catch (error) {
-      console.error('Error loading tree data:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateTree = async (name, description) => {
+  const handleUserSelect = (userName) => {
+    const user = persons.find((p) => p.name === userName);
+    setCurrentUser(user);
+  };
+
+  const handleAddPerson = async (name, dob, notes, contact) => {
     try {
-      const response = await api.post('/api/trees', { name, description });
-      await loadTrees();
-      setSelectedTree(response.data);
+      const createdBy = currentUser ? currentUser.name : 'guest';
+      const response = await api.post('/api/persons', {
+        name,
+        dob,
+        notes,
+        contact,
+        created_by: createdBy,
+      });
+      await loadAllData();
+      return response.data;
     } catch (error) {
-      console.error('Error creating tree:', error);
+      console.error('Error adding person:', error);
+      alert(error.response?.data?.error || 'Error adding person');
+      return null;
     }
   };
 
-  const handleAddPerson = async (personData) => {
+  const handleAddRelationship = async (personAId, personBId, relationType, side) => {
     try {
-      await api.post('/api/persons', {
-        ...personData,
-        tree_id: selectedTree.id
+      const createdBy = currentUser ? currentUser.name : 'guest';
+      await api.post('/api/relationships', {
+        person_a_id: personAId,
+        person_b_id: personBId,
+        relation_type: relationType,
+        side,
+        created_by: createdBy,
       });
-      await loadTreeData();
-      setShowPersonForm(false);
+      await loadAllData();
+      return true;
     } catch (error) {
-      console.error('Error adding person:', error);
+      console.error('Error adding relationship:', error);
+      alert(error.response?.data?.error || 'Error adding relationship');
+      return false;
     }
   };
 
   const handleDeletePerson = async (personId) => {
-    if (window.confirm('Are you sure you want to delete this person?')) {
+    if (window.confirm('Delete this person and all their relationships?')) {
       try {
         await api.delete(`/api/persons/${personId}`);
-        await loadTreeData();
+        await loadAllData();
       } catch (error) {
         console.error('Error deleting person:', error);
       }
     }
   };
 
+  const handleDeleteRelationship = async (relationshipId) => {
+    if (window.confirm('Delete this relationship?')) {
+      try {
+        await api.delete(`/api/relationships/${relationshipId}`);
+        await loadAllData();
+      } catch (error) {
+        console.error('Error deleting relationship:', error);
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-3xl font-bold text-gray-900">🌳 KulaGraph</h1>
-          <p className="text-gray-600">Interactive Family Tree Tracker</p>
-        </div>
-      </header>
+    <ThemeProvider>
+      <div className="min-h-screen bg-white dark:bg-slate-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+        <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow p-6 sticky top-8">
-              <h2 className="text-lg font-semibold mb-4 text-gray-900">Family Trees</h2>
-              <TreeList
-                trees={trees}
-                selectedTree={selectedTree}
-                onSelectTree={setSelectedTree}
-                onCreateTree={handleCreateTree}
-              />
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {selectedTree ? (
-              <div className="bg-white rounded-lg shadow">
-                {/* Tabs */}
-                <div className="border-b border-gray-200">
-                  <div className="flex space-x-8 px-6">
-                    <button
-                      onClick={() => setActiveTab('graph')}
-                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === 'graph'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      📊 Graph View
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('persons')}
-                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === 'persons'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      👥 Members
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('relations')}
-                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === 'relations'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      🔗 Relations
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('search')}
-                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === 'search'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      🔍 Search
-                    </button>
-                  </div>
+        {!currentUser ? (
+          <UserInput
+            persons={persons}
+            onUserSelect={handleUserSelect}
+            onAddPerson={handleAddPerson}
+          />
+        ) : (
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            {/* User Header */}
+            <div className="mb-8 bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-700 dark:to-purple-800 text-white p-6 rounded-lg shadow-lg">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-bold">{currentUser.name}'s Family</h2>
+                  <p className="text-blue-100 mt-1">Exploring your family tree</p>
                 </div>
+                <button
+                  onClick={() => setCurrentUser(null)}
+                  className="bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-300 px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition"
+                >
+                  Switch User
+                </button>
+              </div>
+            </div>
 
-                {/* Tab Content */}
-                <div className="p-6">
-                  {loading ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">Loading...</p>
-                    </div>
-                  ) : (
-                    <>
-                      {activeTab === 'graph' && (
-                        <div>
-                          <div className="mb-4 flex justify-between items-center">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {selectedTree.name} - Family Tree
-                            </h3>
-                            <button
-                              onClick={() => setShowPersonForm(true)}
-                              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                            >
-                              + Add Person
-                            </button>
-                          </div>
-                          <TreeViewer
-                            persons={persons}
-                            relationships={relationships}
-                            treeId={selectedTree.id}
-                            onDeletePerson={handleDeletePerson}
-                          />
-                        </div>
-                      )}
+            {/* Tabs */}
+            <div className="bg-white dark:bg-slate-900 rounded-lg shadow mb-6 overflow-hidden border border-gray-200 dark:border-slate-700">
+              <div className="flex border-b border-gray-200 dark:border-slate-700">
+                {['graph', 'relations', 'profiles'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex-1 px-6 py-4 font-semibold transition text-center ${
+                      activeTab === tab
+                        ? 'bg-blue-500 dark:bg-blue-700 text-white'
+                        : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {tab === 'graph' && '📊 Graph View'}
+                    {tab === 'relations' && '🔗 Find Relations'}
+                    {tab === 'profiles' && '👥 All Members'}
+                  </button>
+                ))}
+              </div>
 
-                      {activeTab === 'persons' && (
-                        <div>
-                          <div className="mb-4 flex justify-between items-center">
-                            <h3 className="text-lg font-semibold text-gray-900">Family Members</h3>
-                            <button
-                              onClick={() => setShowPersonForm(true)}
-                              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                            >
-                              + Add Person
-                            </button>
-                          </div>
-                          <div className="space-y-2">
-                            {persons.length === 0 ? (
-                              <p className="text-gray-500">No family members yet. Add one to get started!</p>
-                            ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {persons.map((person) => (
-                                  <div key={person.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
-                                    <h4 className="font-semibold text-gray-900">{person.name}</h4>
-                                    {person.dob && <p className="text-sm text-gray-500">📅 {person.dob}</p>}
-                                    {person.notes && <p className="text-sm text-gray-600 mt-2">{person.notes}</p>}
-                                    {person.contact && <p className="text-sm text-gray-500">📞 {person.contact}</p>}
-                                    <button
-                                      onClick={() => handleDeletePerson(person.id)}
-                                      className="mt-3 text-red-600 hover:text-red-700 text-sm"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {activeTab === 'relations' && (
-                        <RelationshipViewer
+              <div className="p-6">
+                {loading ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+                  </div>
+                ) : (
+                  <>
+                    {activeTab === 'graph' && (
+                      <div className="space-y-6">
+                        <GraphViewer
                           persons={persons}
                           relationships={relationships}
-                          treeId={selectedTree.id}
-                          onRelationshipAdded={loadTreeData}
+                          currentUser={currentUser}
+                          onDeletePerson={handleDeletePerson}
+                          onDeleteRelationship={handleDeleteRelationship}
                         />
-                      )}
+                      </div>
+                    )}
 
-                      {activeTab === 'search' && (
-                        <PersonSearch persons={persons} />
-                      )}
-                    </>
-                  )}
-                </div>
+                    {activeTab === 'relations' && (
+                      <RelationshipQuery
+                        persons={persons}
+                        relationships={relationships}
+                        currentUser={currentUser}
+                        onAddRelationship={handleAddRelationship}
+                        onAddPerson={handleAddPerson}
+                      />
+                    )}
+
+                    {activeTab === 'profiles' && (
+                      <PersonProfiles
+                        persons={persons}
+                        relationships={relationships}
+                        currentUser={currentUser}
+                        onDeletePerson={handleDeletePerson}
+                        onDeleteRelationship={handleDeleteRelationship}
+                        onAddRelationship={handleAddRelationship}
+                      />
+                    )}
+                  </>
+                )}
               </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow p-8 text-center">
-                <p className="text-gray-500">No family trees yet. Create one to get started!</p>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
-      </main>
-
-      {/* Person Form Modal */}
-      {showPersonForm && selectedTree && (
-        <PersonForm
-          onSubmit={handleAddPerson}
-          onCancel={() => setShowPersonForm(false)}
-        />
-      )}
-    </div>
+        )}
+      </div>
+    </ThemeProvider>
   );
 }
 

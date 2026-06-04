@@ -5,8 +5,8 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
-    'Helvetica Neue', sans-serif;
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -16,56 +16,50 @@ code {
     monospace;
 }
 
-.graph-container {
-  width: 100%;
-  height: 600px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background-color: #f9fafb;
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-svg.graph {
-  width: 100%;
-  height: 100%;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.node circle {
-  fill: #3b82f6;
-  stroke: #1e40af;
-  stroke-width: 2px;
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
-.node text {
-  font-size: 12px;
-  text-anchor: middle;
-  pointer-events: none;
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
-.node.active circle {
-  fill: #f59e0b;
-  stroke: #d97706;
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
 }
 
-.link {
-  stroke: #9ca3af;
-  stroke-width: 2px;
-  marker-end: url(#arrowhead);
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
-.link.spouse {
-  stroke: #ec4899;
-  stroke-dasharray: 5,5;
+/* D3 Graph styling */
+svg.dark-mode {
+  background-color: #0f172a;
 }
 
-.link.sibling {
-  stroke: #06b6d4;
-}
-
-.link.parent {
+.link-parent {
   stroke: #10b981;
 }
 
-.link.partner {
+.link-spouse {
+  stroke: #ec4899;
+  stroke-dasharray: 5, 5;
+}
+
+.link-sibling {
+  stroke: #06b6d4;
+}
+
+.link-child {
   stroke: #f59e0b;
-  stroke-dasharray: 3,3;
 }
