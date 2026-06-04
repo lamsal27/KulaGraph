@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
+    'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.graph-container {
+  width: 100%;
+  height: 600px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #f9fafb;
+}
+
+svg.graph {
+  width: 100%;
+  height: 100%;
+}
+
+.node circle {
+  fill: #3b82f6;
+  stroke: #1e40af;
+  stroke-width: 2px;
+}
+
+.node text {
+  font-size: 12px;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.node.active circle {
+  fill: #f59e0b;
+  stroke: #d97706;
+}
+
+.link {
+  stroke: #9ca3af;
+  stroke-width: 2px;
+  marker-end: url(#arrowhead);
+}
+
+.link.spouse {
+  stroke: #ec4899;
+  stroke-dasharray: 5,5;
+}
+
+.link.sibling {
+  stroke: #06b6d4;
+}
+
+.link.parent {
+  stroke: #10b981;
+}
+
+.link.partner {
+  stroke: #f59e0b;
+  stroke-dasharray: 3,3;
+}
